@@ -1,0 +1,25 @@
+{
+  "name": "__PROVIDER_ID__-provider",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone scraper provider for __PROVIDER_ID__ — joins the distributed catalog over Redis/BullMQ.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node lib/index.js",
+    "types:check": "tsc --noEmit",
+    "test": "NODE_ENV=test TZ=utc tsx --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@neuralsearchindex/scraper-provider-sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
