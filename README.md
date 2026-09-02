@@ -9,9 +9,14 @@ app, no Postgres, and no HTTP. Redis is the only connection a worker needs.
 - **Contract** (`contract.ts`) — the `SiteProvider` interface (identical to the central's), plus
   `matchesDomain` / `resolveStrategy`. A provider is ordinary data: an id, domains, a streaming
   `discover()`, and a deterministic `extractDetails()`.
-- **Engine** (`engine.ts`) — a dependency-light deterministic toolkit: `fetchHtml`,
+- **Light helpers** (main import) — a dependency-light deterministic toolkit: `fetchHtml`,
   `fetchSitemapEntries` / `fetchSitemapLocs`, `extractLinks`, `harvestJsonLd`. Enough to build a
   provider that needs **no headless browser and no LLM**, so the image stays tiny.
+- **Full engine** (`@neuralsearchindex/scraper-provider-sdk/engine`) — the SAME engine the central
+  scraper uses, vendored here so both share one implementation: `scrape` (curl→browser escalation
+  ladder with Cloudflare handling), `crawl`/`crawlStream`, robots + sitemap, `htmlToMarkdown`,
+  `extractImages`. Loads the browser lazily, so importing it for `crawl`/`scrape`-fetch stays
+  playwright-free until a page actually needs rendering.
 - **Shared browser** (`@neuralsearchindex/scraper-provider-sdk/browser`) — the **same** engine the
   central scraper uses (`loadPage`, `waitForChallengeToClear`: camoufox + chromium-over-CDP ladder,
   Cloudflare-challenge clearing, per-host backend caching). On a separate subpath with `playwright-core`
