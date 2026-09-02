@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { extractLinks, harvestJsonLd, parseSitemapEntries, parseSitemapLocs } from "./engine";
+import { extractLinks, harvestJsonLd, parseSitemapEntries, parseSitemapLocs } from "./net";
 import { matchesDomain, resolveStrategy, type SiteProvider } from "./contract";
 
 const SITEMAP = `<?xml version="1.0"?>

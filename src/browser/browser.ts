@@ -12,7 +12,7 @@ import type {
   Route,
   Request as PlaywrightRequest,
 } from "playwright-core";
-import { createLogger } from "./logger";
+import { createLogger } from "../logger";
 import {
   AD_SERVING_DOMAINS,
   BLOCK_MEDIA,
@@ -20,7 +20,7 @@ import {
   PLAYWRIGHT_VNC_CDP_URL,
 } from "./constants";
 import { type WaitUntilOption } from "./types";
-import { CHALLENGE_MARKERS } from "./challenge";
+import { CHALLENGE_MARKERS } from "../challenge";
 
 /**
  * Shared browser wrapper used by the scrape orchestrator.
@@ -522,7 +522,7 @@ export async function solveTurnstile(page: Page): Promise<void> {
 // The shared Cloudflare interstitial markers live in the dependency-free
 // `./challenge.js` module so the plain-HTTP fetch path can reuse the same
 // detection without importing the browser engine. Re-exported here for callers.
-export { CHALLENGE_MARKERS } from "./challenge";
+export { CHALLENGE_MARKERS } from "../challenge";
 
 /**
  * Positive detection of a Cloudflare block: resolves `false` as soon as no

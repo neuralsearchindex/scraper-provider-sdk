@@ -2,7 +2,7 @@ import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
 
 import type { SiteProvider } from "./contract";
-import { fetchHtml } from "./engine";
+import { fetchHtml } from "./net";
 import {
   QUEUE_COMPLETE_RUN,
   QUEUE_REGISTER_PROVIDER,

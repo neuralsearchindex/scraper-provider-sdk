@@ -5,5 +5,5 @@
  * optional peer) never load for deterministic, fetch-only providers.
  */
 export * from "./browser";
-export { textLooksLikeChallenge } from "./challenge";
+export { textLooksLikeChallenge } from "../challenge";
 export { WAIT_UNTIL_OPTIONS, type WaitUntilOption } from "./types";
