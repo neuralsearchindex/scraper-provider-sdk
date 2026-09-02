@@ -12,8 +12,13 @@ app, no Postgres, and no HTTP. Redis is the only connection a worker needs.
 - **Engine** (`engine.ts`) — a dependency-light deterministic toolkit: `fetchHtml`,
   `fetchSitemapEntries` / `fetchSitemapLocs`, `extractLinks`, `harvestJsonLd`. Enough to build a
   provider that needs **no headless browser and no LLM**, so the image stays tiny.
+- **Shared browser** (`@neuralsearchindex/scraper-provider-sdk/browser`) — the **same** engine the
+  central scraper uses (`loadPage`, `waitForChallengeToClear`: camoufox + chromium-over-CDP ladder,
+  Cloudflare-challenge clearing, per-host backend caching). On a separate subpath with `playwright-core`
+  as an **optional peer**, so it (and the browser) never load for deterministic providers. Set
+  `detailFetchEngine: "browser"` on a provider to render its detail pages.
 - **Runtime** (`runProviderWorker`) — registers the provider with the central catalog, consumes its
-  `discover:<id>` / `scrape:<id>` lanes, runs the provider, and reports results back over BullMQ
+  `discover.<id>` / `scrape.<id>` lanes, runs the provider, and reports results back over BullMQ
   (`saveDiscovered` per batch, `saveScraped` per listing, `completeRun` at the end). The central
   persists. Presence-based: stopping the worker de-registers it automatically.
 - **CLI** (`create-scraper-provider <id>`) — scaffolds a ready-to-run standalone provider app.

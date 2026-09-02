@@ -2,7 +2,7 @@ import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
 
 import type { SiteProvider } from "./contract";
-import { fetchHtml, fetchRendered } from "./engine";
+import { fetchHtml } from "./engine";
 import {
   QUEUE_COMPLETE_RUN,
   QUEUE_REGISTER_PROVIDER,
@@ -28,12 +28,18 @@ export interface RunProviderWorkerOptions {
   /** Per-lane concurrency (default 4). */
   concurrency?: number;
   /**
-   * Optional REMOTE browser (CDP) for JS-heavy sites. When set, providers whose
-   * `detailFetchEngine === "browser"` render detail pages via this browser instead of plain fetch.
-   * Requires the optional peer dependency `playwright-core`. Omit (or set `detailFetchEngine: "curl"`)
-   * for deterministic providers — they stay browserless and tiny.
+   * Optional REMOTE browser for JS-heavy sites. When set, providers whose
+   * `detailFetchEngine === "browser"` render detail pages via the shared browser engine (the SAME
+   * camoufox+chromium/CDP + Cloudflare-clearing engine the central scraper uses) instead of plain
+   * fetch. Requires the optional peer dependency `playwright-core`. Endpoints come from
+   * `cdpUrl`/`camoufoxWs` (or the `PLAYWRIGHT_VNC_CDP_URL`/`PLAYWRIGHT_VNC_CAMOUFOX_WS` env). Omit for
+   * deterministic providers — they stay browserless and tiny.
    */
-  browser?: { cdpUrl: string; waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit" };
+  browser?: {
+    cdpUrl?: string;
+    camoufoxWs?: string;
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+  };
   /** Optional structured logger; defaults to console. */
   logger?: Pick<Console, "info" | "warn" | "error">;
 }
@@ -53,6 +59,30 @@ export async function runProviderWorker(opts: RunProviderWorkerOptions): Promise
   const log = opts.logger ?? console;
   const concurrency = opts.concurrency ?? 4;
   const byId = new Map(opts.providers.map((p) => [p.id, p]));
+
+  // Point the shared browser engine at the configured remote browser (its constants read these env
+  // vars). Set before the ./browser module is first (lazily) imported by a scrape job.
+  if (opts.browser?.cdpUrl) process.env.PLAYWRIGHT_VNC_CDP_URL = opts.browser.cdpUrl;
+  if (opts.browser?.camoufoxWs) process.env.PLAYWRIGHT_VNC_CAMOUFOX_WS = opts.browser.camoufoxWs;
+
+  // Lazy-load the browser engine ONLY when a provider needs it, so deterministic providers never
+  // pull in playwright-core. Uses the SAME loadPage/waitForChallengeToClear as the central scraper.
+  let browserMod: typeof import("./browser") | null = null;
+  async function renderViaBrowser(
+    url: string,
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit"
+  ): Promise<string> {
+    if (!browserMod) browserMod = await import("./browser");
+    const { loadPage, waitForChallengeToClear } = browserMod;
+    return loadPage(url, {
+      waitUntil: waitUntil ?? "domcontentloaded",
+      timeout: 45_000,
+      evaluate: async (page) => {
+        await waitForChallengeToClear(page);
+        return page.content();
+      },
+    });
+  }
 
   const connection = new IORedis(opts.redisUrl, { maxRetriesPerRequest: null });
 
@@ -125,17 +155,11 @@ export async function runProviderWorker(opts: RunProviderWorkerOptions): Promise
       if (!provider.extractDetails) {
         throw new Error(`provider ${providerId} has no extractDetails (LLM extraction is central-only)`);
       }
-      // Render via the remote browser when the provider asks for it and a CDP url is configured;
-      // otherwise a plain HTTP fetch (deterministic, no browser).
-      const useBrowser = provider.detailFetchEngine === "browser";
-      if (useBrowser && !opts.browser?.cdpUrl) {
-        throw new Error(
-          `provider ${providerId} requires a browser (detailFetchEngine="browser") but runProviderWorker was started without browser.cdpUrl`
-        );
-      }
+      // Render via the shared browser engine when the provider asks for it; otherwise a plain HTTP
+      // fetch (deterministic, no browser).
       const html =
-        useBrowser && opts.browser
-          ? await fetchRendered(url, { cdpUrl: opts.browser.cdpUrl, waitUntil: opts.browser.waitUntil, timeoutMs: 45_000 })
+        provider.detailFetchEngine === "browser"
+          ? await renderViaBrowser(url, opts.browser?.waitUntil)
           : await fetchHtml(url, { timeoutMs: 30_000 });
       const det = await provider.extractDetails({ html, fullHtml: html, url });
       if (!det.ad) throw new Error(det.warnings.join("; ") || "extraction produced no ad");

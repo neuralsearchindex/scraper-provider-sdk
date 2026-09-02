@@ -33,9 +33,13 @@ The default engine is plain HTTP (tiny image, no browser). If your site needs Ja
 
 1. `pnpm add playwright-core`
 2. Set `REMOTE_BROWSER_CDP_URL` to a running remote browser (e.g. the platform's `playwright-vnc`).
-3. Give the provider `detailFetchEngine: "browser"` — detail pages are then rendered over CDP
-   before `extractDetails()` runs. (Use `fetchRendered` from the SDK inside `discover()` too if the
-   listing index itself needs rendering.)
+3. Give the provider `detailFetchEngine: "browser"` — detail pages are then rendered by the shared
+   browser engine (the SAME camoufox+chromium/CDP + Cloudflare-clearing engine the central scraper
+   uses) before `extractDetails()` runs. If the listing index itself needs rendering, import it in
+   `discover()`:
+   ```ts
+   import { loadPage, waitForChallengeToClear } from "@neuralsearchindex/scraper-provider-sdk/browser";
+   ```
 
 ## Deploy
 
