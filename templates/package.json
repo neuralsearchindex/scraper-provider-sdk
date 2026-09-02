@@ -12,7 +12,7 @@
     "test": "NODE_ENV=test TZ=utc tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@neuralsearchindex/scraper-provider-sdk": "^0.1.0"
+    "@neuralsearchindex/scraper-provider-sdk": "github:neuralsearchindex/scraper-provider-sdk"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
