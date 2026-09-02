@@ -34,6 +34,46 @@ export async function fetchText(url: string, opts: FetchOptions = {}): Promise<s
 /** Fetch a page's HTML (alias for {@link fetchText}; both the raw body and full document). */
 export const fetchHtml = fetchText;
 
+export interface RenderOptions {
+  /** CDP endpoint of a REMOTE browser (e.g. playwright-vnc: `http://playwright-vnc:9222`). */
+  cdpUrl: string;
+  /** Playwright waitUntil (default `networkidle`). */
+  waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+  timeoutMs?: number;
+  userAgent?: string;
+}
+
+/**
+ * Render a JS-heavy page via a REMOTE browser over CDP and return its HTML. Uses `playwright-core`,
+ * an OPTIONAL peer dependency — install it (and point `cdpUrl` at a running browser, e.g. the
+ * platform's playwright-vnc) only for providers that need JS rendering. Deterministic providers that
+ * use {@link fetchHtml} pull in neither playwright nor a browser, so their image stays tiny.
+ */
+export async function fetchRendered(url: string, opts: RenderOptions): Promise<string> {
+  let chromium: typeof import("playwright-core").chromium;
+  try {
+    ({ chromium } = await import("playwright-core"));
+  } catch {
+    throw new Error(
+      "fetchRendered requires the optional peer dependency 'playwright-core' — add it to your provider app to enable browser rendering."
+    );
+  }
+  const browser = await chromium.connectOverCDP(opts.cdpUrl);
+  try {
+    const context = await browser.newContext(opts.userAgent ? { userAgent: opts.userAgent } : undefined);
+    const page = await context.newPage();
+    try {
+      await page.goto(url, { waitUntil: opts.waitUntil ?? "networkidle", timeout: opts.timeoutMs ?? 45_000 });
+      return await page.content();
+    } finally {
+      await context.close();
+    }
+  } finally {
+    // Close only our connection; the remote browser process stays up for other jobs.
+    await browser.close();
+  }
+}
+
 export interface SitemapEntry {
   loc: string;
   lastmod?: string;

@@ -2,7 +2,7 @@ import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
 
 import type { SiteProvider } from "./contract";
-import { fetchHtml } from "./engine";
+import { fetchHtml, fetchRendered } from "./engine";
 import {
   QUEUE_COMPLETE_RUN,
   QUEUE_REGISTER_PROVIDER,
@@ -27,6 +27,13 @@ export interface RunProviderWorkerOptions {
   redisUrl: string;
   /** Per-lane concurrency (default 4). */
   concurrency?: number;
+  /**
+   * Optional REMOTE browser (CDP) for JS-heavy sites. When set, providers whose
+   * `detailFetchEngine === "browser"` render detail pages via this browser instead of plain fetch.
+   * Requires the optional peer dependency `playwright-core`. Omit (or set `detailFetchEngine: "curl"`)
+   * for deterministic providers — they stay browserless and tiny.
+   */
+  browser?: { cdpUrl: string; waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit" };
   /** Optional structured logger; defaults to console. */
   logger?: Pick<Console, "info" | "warn" | "error">;
 }
@@ -118,9 +125,18 @@ export async function runProviderWorker(opts: RunProviderWorkerOptions): Promise
       if (!provider.extractDetails) {
         throw new Error(`provider ${providerId} has no extractDetails (LLM extraction is central-only)`);
       }
-      const html = await fetchHtml(url, {
-        timeoutMs: 30_000,
-      });
+      // Render via the remote browser when the provider asks for it and a CDP url is configured;
+      // otherwise a plain HTTP fetch (deterministic, no browser).
+      const useBrowser = provider.detailFetchEngine === "browser";
+      if (useBrowser && !opts.browser?.cdpUrl) {
+        throw new Error(
+          `provider ${providerId} requires a browser (detailFetchEngine="browser") but runProviderWorker was started without browser.cdpUrl`
+        );
+      }
+      const html =
+        useBrowser && opts.browser
+          ? await fetchRendered(url, { cdpUrl: opts.browser.cdpUrl, waitUntil: opts.browser.waitUntil, timeoutMs: 45_000 })
+          : await fetchHtml(url, { timeoutMs: 30_000 });
       const det = await provider.extractDetails({ html, fullHtml: html, url });
       if (!det.ad) throw new Error(det.warnings.join("; ") || "extraction produced no ad");
 

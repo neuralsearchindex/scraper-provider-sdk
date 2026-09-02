@@ -24,7 +24,7 @@ app, no Postgres, and no HTTP. Redis is the only connection a worker needs.
 # scaffold a new provider app
 npx @neuralsearchindex/scraper-provider-sdk create-scraper-provider superauto-pl
 cd superauto-pl-provider && pnpm install
-JOBS_REDIS_URL=redis://localhost:6379 pnpm dev
+REDIS_URL=redis://localhost:6379 pnpm dev
 ```
 
 Then implement `discover()` + `extractDetails()` in `src/superauto-pl.provider.ts`.

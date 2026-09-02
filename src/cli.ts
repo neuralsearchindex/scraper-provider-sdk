@@ -56,7 +56,7 @@ function main(argv: string[]): void {
   const listed = readdirSync(join(target, "src")).sort();
   console.log(`✔ scaffolded ${basename(target)}`);
   console.log(`  src/: ${listed.join(", ")}`);
-  console.log(`\nNext:\n  cd ${id}-provider && pnpm install && JOBS_REDIS_URL=redis://localhost:6379 pnpm dev`);
+  console.log(`\nNext:\n  cd ${id}-provider && pnpm install && REDIS_URL=redis://localhost:6379 pnpm dev`);
 }
 
 main(process.argv);

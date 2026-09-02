@@ -21,8 +21,9 @@ export const QUEUE_SAVE_SCRAPED = "scraping/saveScraped";
 export const QUEUE_COMPLETE_RUN = "scraping/completeRun";
 
 // ── Worker-consumed lanes (the central dispatches TO these; keyed per provider) ──────────────
-export const discoverLane = (queue: string): string => `discover:${queue}`;
-export const scrapeLane = (queue: string): string => `scrape:${queue}`;
+// NOTE: BullMQ forbids ":" in queue names (it's the internal key separator), so lanes use ".".
+export const discoverLane = (queue: string): string => `discover.${queue}`;
+export const scrapeLane = (queue: string): string => `scrape.${queue}`;
 
 // ── Payloads ────────────────────────────────────────────────────────────────────────────────
 

@@ -17,8 +17,8 @@ no dependency on the central scraper app, no Postgres, no HTTP.
 
 ```bash
 pnpm install
-cp .env.example .env            # point JOBS_REDIS_URL at the shared Redis
-JOBS_REDIS_URL=redis://localhost:6379 pnpm dev
+cp .env.example .env            # point REDIS_URL at the shared Redis
+REDIS_URL=redis://localhost:6379 pnpm dev
 ```
 
 Implement the two hooks in `src/__PROVIDER_ID__.provider.ts`:
@@ -27,11 +27,21 @@ Implement the two hooks in `src/__PROVIDER_ID__.provider.ts`:
 
 Keep parsing logic in pure exported helpers and unit-test them (`pnpm test`).
 
+### JS-heavy sites (remote browser)
+
+The default engine is plain HTTP (tiny image, no browser). If your site needs JavaScript to render:
+
+1. `pnpm add playwright-core`
+2. Set `REMOTE_BROWSER_CDP_URL` to a running remote browser (e.g. the platform's `playwright-vnc`).
+3. Give the provider `detailFetchEngine: "browser"` — detail pages are then rendered over CDP
+   before `extractDetails()` runs. (Use `fetchRendered` from the SDK inside `discover()` too if the
+   listing index itself needs rendering.)
+
 ## Deploy
 
 ```bash
 docker build -t __PROVIDER_ID__-provider .
-docker run -e JOBS_REDIS_URL=redis://valkey:6379/1 __PROVIDER_ID__-provider
+docker run -e REDIS_URL=redis://valkey:6379/1 __PROVIDER_ID__-provider
 ```
 
 Run multiple replicas to scale — they're competing consumers on the same lanes.
