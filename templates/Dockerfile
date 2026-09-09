@@ -1,7 +1,7 @@
 # Standalone provider worker image (deterministic tier: no browser, no LLM).
 FROM node:24-alpine AS build
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && apk add --no-cache git
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install
 COPY . .

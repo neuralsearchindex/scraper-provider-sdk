@@ -3,7 +3,7 @@
 # CDP via REMOTE_BROWSER_CDP_URL. Multi-arch (amd64+arm64) via buildx in CI.
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install
 COPY . .
