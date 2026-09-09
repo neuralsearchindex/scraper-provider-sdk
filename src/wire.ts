@@ -4,7 +4,7 @@
  * BullMQ job's `data` is the `{ payload, meta }` envelope the central's JobsManager uses.
  */
 
-import type { BusinessDomain, DiscoveryCursor, ExtractionStrategy } from "./contract";
+import type { BusinessDomain, DiscoveryCursor, ExtractionStrategy, ProviderTier } from "./contract";
 
 /** The central's JobsManager job-data envelope. */
 export interface JobEnvelope<P> {
@@ -27,6 +27,16 @@ export const scrapeLane = (queue: string): string => `scrape.${queue}`;
 
 // ── Payloads ────────────────────────────────────────────────────────────────────────────────
 
+/** Catalog (category) metadata a worker advertises alongside each provider. */
+export interface RegisterCatalogMeta {
+  id: string;
+  name: string;
+  description: string;
+  market: string;
+  /** The running image's version (CATALOG_VERSION env, else the baked package.json). */
+  version: string;
+}
+
 export interface RegisterProviderPayload {
   id: string;
   domains: string[];
@@ -35,6 +45,10 @@ export interface RegisterProviderPayload {
   seedUrl?: string | null;
   languages?: string[] | null;
   strategy?: ExtractionStrategy | null;
+  /** Source tier — `agent` (direct) or `portal` (aggregator). */
+  tier?: ProviderTier | null;
+  /** The catalog this provider ships in; omitted for a bare single-provider worker. */
+  catalog?: RegisterCatalogMeta | null;
 }
 
 /** Central → worker discover lane. */

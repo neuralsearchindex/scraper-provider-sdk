@@ -8,6 +8,15 @@
 export type BusinessDomain = "real_estate" | "vehicles";
 export type ExtractionStrategy = "manual" | "llm";
 
+/**
+ * Provider tier — the source scale/reliability class:
+ *   - `agent`  — a direct/original source: a single dealer's or agency's own site (small, stable).
+ *   - `portal` — a large aggregator that lists many sellers (otodom, otomoto, immoscout24, …). More
+ *     coverage, but more likely to bot-wall / change / rate-limit.
+ * Lets an operator deploy only `agent` providers (via `CATALOG_TIERS`) and hold back the portals.
+ */
+export type ProviderTier = "agency" | "portal";
+
 /** One discovered listing from an index/search/sitemap source. */
 export interface DiscoveredListing {
   url: string;
@@ -52,15 +61,31 @@ export interface DetailExtraction {
 
 export type DetailExtractor = (input: ProviderPageInput) => Promise<DetailExtraction>;
 
-/** A site provider plugin — the unit an author ships. */
+/** A site provider plugin — the unit an author ships. Mirrors the central scraper's `SiteProvider`. */
 export interface SiteProvider {
   readonly id: string;
   readonly domains: readonly string[];
   readonly businessDomain?: BusinessDomain;
+  /** Source tier (see {@link ProviderTier}); omitted ⇒ `agent` (a direct/original source). */
+  readonly tier?: ProviderTier;
   supports?(url: string): boolean;
   discover?(seedUrl: string, opts?: DiscoverOptions): AsyncIterable<DiscoveryBatch>;
   readonly extractDetails?: DetailExtractor;
   readonly strategy?: ExtractionStrategy;
+  /**
+   * Marks a provider whose data comes from a clean structured source (`__NEXT_DATA__`, a JSON API,
+   * or JSON-LD). The central then RENDERS `pageContent` from the assembled structured ad (dense
+   * label:value Markdown) rather than from the detail-page HTML. Leave unset for HTML providers.
+   */
+  readonly structuredSource?: boolean;
+  /** CSS selector scoping the HTML→Markdown cleaner to the listing's main content (HTML providers). */
+  readonly contentSelector?: string;
+  /** Build the embeddable `pageContent` Markdown directly (escape hatch); return null/"" to fall back. */
+  pageContent?(input: ProviderPageInput): Promise<string | null> | string | null;
+  /**
+   * @deprecated superseded by {@link structuredSource}; kept for back-compat with older workers. When
+   * true the worker sends no `pageContent`.
+   */
   readonly skipPageContent?: boolean;
   readonly detailFetchEngine?: "auto" | "browser" | "curl";
 }

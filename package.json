@@ -18,14 +18,20 @@
       "types": "./lib/engine/index.d.ts",
       "default": "./lib/engine/index.js"
     },
+    "./parse": {
+      "types": "./lib/parse/index.d.ts",
+      "default": "./lib/parse/index.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
-    "create-scraper-provider": "lib/cli.js"
+    "create-scraper-provider": "lib/cli.js",
+    "create-scraper-catalog": "lib/cli-catalog.js"
   },
   "files": [
     "lib",
-    "templates"
+    "templates",
+    "templates-catalog"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
@@ -35,13 +41,15 @@
     "test": "NODE_ENV=test TZ=utc tsx --test --test-concurrency=1 \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "awilix": "^12.1.1",
     "bullmq": "^5.66.0",
     "cheerio": "^1.2.0",
     "ioredis": "^5.8.2",
     "node-html-markdown": "^2.0.0",
     "robots-parser": "^3.0.1",
     "undici": "^7.4.0",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "zod": "3.25.76"
   },
   "peerDependencies": {
     "playwright-core": "^1.40.0"

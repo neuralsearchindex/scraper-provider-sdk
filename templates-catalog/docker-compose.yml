@@ -1,0 +1,36 @@
+# Standalone dev/test stack for this catalog: Valkey + a shared playwright-vnc browser + the worker.
+# playwright-vnc is bundled so browser-based providers (Cloudflare-gated sitemaps / JS-heavy detail
+# pages) work in local testing without the central stack. GOTCHA: REDIS_URL must use the SAME Redis
+# DB index the central scraper's JOBS_REDIS_URL uses (DB /1) — a different index silently isolates
+# registration. For a FULL e2e (central scraper + admin + postgres) add this worker to the scraper
+# repo's docker-compose.yml instead.
+services:
+  __CATALOG_ID__-catalog:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    image: ghcr.io/neuralsearchindex/__CATALOG_ID__-catalog:latest
+    environment:
+      - REDIS_URL=redis://valkey:6379/1
+      - CONCURRENCY=4
+      # Only run these provider tiers (CSV of agency,portal). Omit → all. Set to `agency` to hold back
+      # the big portals (which are more likely to bot-wall) and run only direct-agency providers.
+      # - CATALOG_TIERS=agency
+      - PLAYWRIGHT_VNC_CDP_URL=http://playwright-vnc:9222
+      - PLAYWRIGHT_VNC_CAMOUFOX_WS=ws://playwright-vnc:9224/camoufox
+      - REMOTE_BROWSER_CDP_URL=http://playwright-vnc:9222
+    depends_on:
+      - valkey
+      - playwright-vnc
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "6379:6379"
+
+  # Shared Cloudflare-clearing browser (CDP :9222 + Camoufox WS :9224) — providers with
+  # `detailFetchEngine: "browser"` or a browser-fetched sitemap reach it over the compose network.
+  playwright-vnc:
+    image: ghcr.io/neuralsearchindex/playwright-vnc:latest
+    platform: linux/amd64
+    shm_size: "2gb"

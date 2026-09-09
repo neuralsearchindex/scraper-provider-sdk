@@ -32,7 +32,8 @@ export default function __PROVIDER_FACTORY__(): SiteProvider {
     id: "__PROVIDER_ID__",
     domains: ["example.com"], // TODO: the hostnames this provider claims
     businessDomain: "real_estate", // or "vehicles"
-    skipPageContent: true, // deterministic source (JSON-LD) — no page markdown needed
+    tier: "agency", // "agency" (direct/original source) | "portal" (big aggregator)
+    structuredSource: true, // deterministic source (JSON-LD) — pageContent rendered from the ad
 
     async *discover(_seedUrl: string, opts?: DiscoverOptions): AsyncIterable<DiscoveryBatch> {
       const entries = await fetchSitemapEntries(SITEMAP_URL);

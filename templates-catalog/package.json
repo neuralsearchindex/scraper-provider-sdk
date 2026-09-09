@@ -1,0 +1,33 @@
+{
+  "name": "__CATALOG_ID__-catalog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "__CATALOG_NAME__ — a standalone scraper catalog that joins the distributed catalog over Redis/BullMQ.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node lib/index.js",
+    "types:check": "tsc --noEmit",
+    "test": "NODE_ENV=test TZ=utc tsx --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@neuralsearchindex/scraper-provider-sdk": "github:neuralsearchindex/scraper-provider-sdk",
+    "cheerio": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract"
+    ]
+  },
+  "packageManager": "pnpm@10.6.3"
+}

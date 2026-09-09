@@ -1,0 +1,8 @@
+# Dev image for docker-compose: same build, run with tsx watch for fast iteration.
+FROM node:24-bookworm-slim
+WORKDIR /app
+RUN corepack enable
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install
+COPY . .
+CMD ["pnpm", "dev"]
