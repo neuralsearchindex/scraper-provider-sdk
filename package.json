@@ -68,5 +68,12 @@
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract"
+    ]
+  },
+  "packageManager": "pnpm@10.6.3"
 }
