@@ -1,7 +1,7 @@
 # Dev image for docker-compose: same build, run with tsx watch for fast iteration.
 FROM node:24-bookworm-slim
 WORKDIR /app
-RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install
 COPY . .
