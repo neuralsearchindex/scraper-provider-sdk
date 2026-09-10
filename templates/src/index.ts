@@ -1,3 +1,8 @@
+// MUST be the first import — see the note in the catalog template. Sentry can
+// only instrument modules loaded AFTER it initialises, and ES imports are
+// hoisted. No-op unless SENTRY_DSN is set.
+import "@neuralsearchindex/scraper-provider-sdk/errors/register";
+
 import { runProviderWorker } from "@neuralsearchindex/scraper-provider-sdk";
 
 import __PROVIDER_FACTORY__ from "./__PROVIDER_ID__.provider";

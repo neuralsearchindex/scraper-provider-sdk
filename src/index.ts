@@ -19,3 +19,11 @@ export type {
   RunCatalogWorkerOptions,
   RunningProviderWorker,
 } from "./run-provider-worker";
+export {
+  captureCatalogError,
+  catalogErrorsEnabled,
+  closeCatalogErrors,
+  initCatalogErrors,
+  type CaptureCatalogErrorOptions,
+  type InitErrorsOptions,
+} from "./errors";

@@ -1,6 +1,6 @@
 {
   "name": "@neuralsearchindex/scraper-provider-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Author one scraper provider as its own standalone app (own Docker image) that joins the distributed catalog over Redis/BullMQ. Contract + minimal engine + runProviderWorker + a create-scraper-provider scaffolder.",
   "type": "commonjs",
   "main": "lib/index.js",
@@ -22,7 +22,15 @@
       "types": "./lib/parse/index.d.ts",
       "default": "./lib/parse/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./errors": {
+      "types": "./lib/errors.d.ts",
+      "default": "./lib/errors.js"
+    },
+    "./errors/register": {
+      "types": "./lib/errors-register.d.ts",
+      "default": "./lib/errors-register.js"
+    }
   },
   "bin": {
     "create-scraper-provider": "lib/cli.js",
@@ -41,6 +49,8 @@
     "test": "NODE_ENV=test TZ=utc tsx --test --test-concurrency=1 \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@sentry/node": "^10.74.0",
+    "@sentry/profiling-node": "^10",
     "awilix": "^12.1.1",
     "bullmq": "^5.66.0",
     "cheerio": "^1.2.0",

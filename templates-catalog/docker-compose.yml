@@ -19,6 +19,11 @@ services:
       - PLAYWRIGHT_VNC_CDP_URL=http://playwright-vnc:9222
       - PLAYWRIGHT_VNC_CAMOUFOX_WS=ws://playwright-vnc:9224/camoufox
       - REMOTE_BROWSER_CDP_URL=http://playwright-vnc:9222
+      # Error tracking. Deliberately NOT set: with no SENTRY_DSN the SDK
+      # disables reporting entirely, so local iteration does not pollute the
+      # production issue stream with selectors you are still writing. In the
+      # cluster Helm injects this from the glitchtip-dsns Secret.
+      # - SENTRY_DSN=https://<key>@glitchtip.<gateway-ip>.nip.io/<project-id>
     depends_on:
       - valkey
       - playwright-vnc

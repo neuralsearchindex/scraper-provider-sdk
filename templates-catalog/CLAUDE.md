@@ -51,3 +51,35 @@ export default function make<Id>Provider(): SiteProvider {
 
 > Gotcha: the worker's `REDIS_URL` must use the SAME Redis DB index the central scraper's
 > `JOBS_REDIS_URL` uses (`/1`) — a different index silently isolates registration.
+
+## Errors
+
+Failures are reported to the platform's **GlitchTip** automatically — you do
+not need to add anything per provider. `runCatalogWorker` initialises the SDK,
+and every `discover.<id>` / `scrape.<id>` lane failure is captured with the
+`provider`, `lane` and `catalog` tags.
+
+Issues are grouped by **provider and lane**, not by listing URL. A portal that
+changes its markup breaks every listing it has; that is one issue to fix, not
+ten thousand to scroll past. The failing URL is on the issue as context.
+
+Reporting is OFF unless `SENTRY_DSN` is set, so local runs never reach the
+production stream. Do not set it in `.env` — Helm injects the right per-catalog
+DSN in the cluster.
+
+To attach extra context to a failure you are handling yourself:
+
+```ts
+import { captureCatalogError } from "@neuralsearchindex/scraper-provider-sdk";
+
+catch (err) {
+  captureCatalogError(err, { provider: "otodom-pl", lane: "scrape", url });
+  throw err;   // still rethrow — BullMQ needs it to retry
+}
+```
+
+A caught-and-swallowed error is invisible to both BullMQ and GlitchTip. If a
+provider legitimately tolerates a failure, capture it explicitly rather than
+letting it disappear: a catalog serves no HTTP and has no liveness probe, so
+"quietly producing nothing" is its normal failure appearance.
+

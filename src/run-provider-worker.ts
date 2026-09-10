@@ -5,6 +5,7 @@ import IORedis from "ioredis";
 import type { CatalogManifest } from "./catalog";
 import type { SiteProvider } from "./contract";
 import { loadProvidersFromDi } from "./di";
+import { captureCatalogError, initCatalogErrors } from "./errors";
 import { htmlToMarkdown } from "./engine/markdown";
 import { fetchHtml } from "./net";
 import {
@@ -113,6 +114,13 @@ function enabledTiers(): Set<"agency" | "portal"> | null {
 }
 
 export async function runProviderWorker(opts: RunProviderWorkerOptions): Promise<RunningProviderWorker> {
+  // Also initialise here, not only in runCatalogWorker: a SINGLE-provider
+  // worker (the `create-scraper-provider` scaffold) never goes through that
+  // function, and it has exactly the same invisible-failure shape. Idempotent.
+  initCatalogErrors({
+    service: process.env.SENTRY_SERVICE ?? (opts.catalog ? `${opts.catalog.id}-catalog` : "provider-worker"),
+  });
+
   const log = opts.logger ?? console;
   const concurrency = opts.concurrency ?? 4;
   // Filter by the deployment's enabled tiers (CATALOG_TIERS) before doing anything else.
@@ -264,18 +272,55 @@ export async function runProviderWorker(opts: RunProviderWorkerOptions): Promise
     }
   }
 
+  /*
+   * Report lane failures to GlitchTip.
+   *
+   * Hooked to the worker's `failed` event rather than to the two catch blocks
+   * above: both of those already report a partial/failed payload to the
+   * central AND rethrow, so BullMQ raises `failed` for every terminal and
+   * intermediate attempt. One hook therefore covers both lanes and cannot
+   * drift out of step with a future third one.
+   *
+   * Without this a catalog is the platform's most invisible failure mode. It
+   * serves no HTTP, so nothing 500s; the pod stays Running with no liveness
+   * probe to fail; and a provider whose selectors broke simply stops producing
+   * listings. The only prior signal was an absence of data.
+   */
+  function watchLane(worker: Worker, providerId: string, lane: "discover" | "scrape"): Worker {
+    worker.on("failed", (job, err) => {
+      captureCatalogError(err, {
+        provider: providerId,
+        lane,
+        catalog: opts.catalog?.id,
+        url: (job?.data as JobEnvelope<ScrapeLanePayload> | undefined)?.payload?.url,
+        jobId: job?.id,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts?.attempts ?? 1,
+      });
+    });
+    return worker;
+  }
+
   for (const p of opts.providers) {
     workers.push(
-      new Worker<JobEnvelope<DiscoverLanePayload>, void>(discoverLane(p.id), discoverProcessor, {
-        connection,
-        concurrency,
-      })
+      watchLane(
+        new Worker<JobEnvelope<DiscoverLanePayload>, void>(discoverLane(p.id), discoverProcessor, {
+          connection,
+          concurrency,
+        }),
+        p.id,
+        "discover"
+      )
     );
     workers.push(
-      new Worker<JobEnvelope<ScrapeLanePayload>, void>(scrapeLane(p.id), scrapeProcessor, {
-        connection,
-        concurrency,
-      })
+      watchLane(
+        new Worker<JobEnvelope<ScrapeLanePayload>, void>(scrapeLane(p.id), scrapeProcessor, {
+          connection,
+          concurrency,
+        }),
+        p.id,
+        "scrape"
+      )
     );
     log.info(`[provider-worker] consuming ${discoverLane(p.id)} + ${scrapeLane(p.id)}`);
   }
@@ -332,6 +377,21 @@ export function runCatalogWorker(
   opts: RunCatalogWorkerOptions,
 ): Promise<RunningProviderWorker> {
   const { providersGlob, ...rest } = opts;
+
+  /*
+   * Initialise error tracking here, so EVERY existing catalog repo is covered
+   * without a code change of its own — they all funnel through this function.
+   * The chart passes SENTRY_SERVICE=<id>-catalog; the fallback keeps the
+   * service name right when running a catalog outside Kubernetes.
+   *
+   * A catalog that also imports ".../errors/register" as its first import (the
+   * scaffold template does) gets Sentry's automatic HTTP instrumentation as
+   * well, because that runs before undici is loaded. This call cannot: by the
+   * time it executes, the module graph is already built. The second call is a
+   * no-op.
+   */
+  initCatalogErrors({ service: process.env.SENTRY_SERVICE ?? `${manifest.id}-catalog` });
+
   const providers = loadProvidersFromDi(providersGlob);
   if (providers.length === 0) {
     throw new Error(`catalog "${manifest.id}" loaded 0 providers from ${providersGlob}`);
