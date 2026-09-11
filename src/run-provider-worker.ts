@@ -101,6 +101,26 @@ const tierOf = (p: SiteProvider): "agency" | "portal" => p.tier ?? "agency";
  * The tiers this worker should run, from `CATALOG_TIERS` (CSV of `agent,portal`). Empty/unset → all.
  * Lets an operator deploy only `agent` providers and hold back the portals.
  */
+/**
+ * The `raw` persisted for a scraped listing.
+ *
+ * A provider returns `{ ad, images, raw }` — the detail gallery sits ALONGSIDE the ad, not
+ * inside it, so it has to be merged in here or it is silently dropped: the listing then indexes
+ * with no photos and the image-embedding leg reports "degraded" while the embedder is never even
+ * called. The gallery is applied LAST so a provider-specific `raw.images` shape (otomoto serves
+ * `{ photos: [...] }`) cannot shadow the `string[]` the ingest contract reads via `imageUrls(ad)`.
+ */
+export function buildScrapedRaw(
+  ad: Record<string, unknown>,
+  det: { raw?: Record<string, unknown>; images?: string[] }
+): Record<string, unknown> {
+  return {
+    ...ad,
+    ...(det.raw ?? {}),
+    ...(det.images?.length ? { images: det.images } : {})
+  };
+}
+
 function enabledTiers(): Set<"agency" | "portal"> | null {
   const raw = (process.env.CATALOG_TIERS ?? "").trim();
   if (!raw) return null; // all tiers
@@ -252,7 +272,7 @@ export async function runProviderWorker(opts: RunProviderWorkerOptions): Promise
         providerId,
         domain,
         url,
-        raw: { ...raw, ...(det.raw ?? {}) },
+        raw: buildScrapedRaw(raw, det),
         pageContent: resolvedPageContent,
         warning: det.warnings.join("; ") || null,
         sourceUrl: (raw.sourceUrl as string | undefined) ?? null,
